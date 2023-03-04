@@ -93,7 +93,7 @@ func (m *MysqlRepository) Update(ctx context.Context, req domain.TodoUpdateReque
 
 	if req.IsActive != nil {
 		fields = append(fields, "is_active")
-		values = append(values, req.IsActive)
+		values = append(values, *req.IsActive)
 	}
 
 	if req.Priority != constant.EmptyString {
@@ -121,7 +121,7 @@ func (m *MysqlRepository) Update(ctx context.Context, req domain.TodoUpdateReque
 		UPDATE todos 
 		SET
 			%s			
-		WHERE id = ?
+		WHERE todo_id = ?
 	`, strings.Join(fields, ", ")))
 	if err != nil {
 		return
@@ -136,7 +136,7 @@ func (m *MysqlRepository) Update(ctx context.Context, req domain.TodoUpdateReque
 func (m *MysqlRepository) Delete(ctx context.Context, req domain.TodoDeleteRequest) (res domain.TodoDeleteResponse, err error) {
 	var stmt *sql.Stmt
 	stmt, err = m.Conn.PrepareContext(ctx, `
-		DELETE FROM todos WHERE id = ?
+		DELETE FROM todos WHERE todo_id = ?
 	`)
 	if err != nil {
 		return
@@ -149,6 +149,8 @@ func (m *MysqlRepository) Delete(ctx context.Context, req domain.TodoDeleteReque
 }
 
 func (m *MysqlRepository) GetAll(ctx context.Context, req domain.TodoGetAllRequest) (res domain.TodoGetAllResponse, err error) {
+	res = []domain.Todo{}
+	
 	values := []any{}
 
 	var queryWhere string
@@ -160,7 +162,7 @@ func (m *MysqlRepository) GetAll(ctx context.Context, req domain.TodoGetAllReque
 	var stmt *sql.Stmt
 	stmt, err = m.Conn.PrepareContext(ctx, fmt.Sprintf(`
 		SELECT 
-			id,
+			todo_id,
 			activity_group_id,
 			title,
 			is_active,
@@ -184,16 +186,22 @@ func (m *MysqlRepository) GetAll(ctx context.Context, req domain.TodoGetAllReque
 	for rows.Next() {
 		var todo domain.Todo
 
+		var isActive sql.NullBool
+
 		if err = rows.Scan(
 			&todo.ID,
 			&todo.ActivityGroupID,
 			&todo.Title,
-			&todo.IsActive,
+			&isActive,
 			&todo.Priority,
 			&todo.CreatedAt,
 			&todo.UpdatedAt,
 		); err != nil {
 			return
+		}
+
+		if isActive.Valid {
+			todo.IsActive = isActive.Bool
 		}
 
 		res = append(res, todo)
@@ -206,7 +214,7 @@ func (m *MysqlRepository) GetOne(ctx context.Context, req domain.TodoGetOneReque
 	var stmt *sql.Stmt
 	stmt, err = m.Conn.PrepareContext(ctx, `
 		SELECT 
-			id,
+			todo_id,
 			activity_group_id,
 			title,
 			is_active,
@@ -214,7 +222,7 @@ func (m *MysqlRepository) GetOne(ctx context.Context, req domain.TodoGetOneReque
 			created_at,
 			updated_at
 		FROM todos
-		WHERE id = ?
+		WHERE todo_id = ?
 	`)
 	if err != nil {
 		return
@@ -228,16 +236,22 @@ func (m *MysqlRepository) GetOne(ctx context.Context, req domain.TodoGetOneReque
 	}
 
 	if rows.Next() {
+		var isActive sql.NullBool
+
 		if err = rows.Scan(
 			&res.ID,
 			&res.ActivityGroupID,
 			&res.Title,
-			&res.IsActive,
+			&isActive,
 			&res.Priority,
 			&res.CreatedAt,
 			&res.UpdatedAt,
 		); err != nil {
 			return
+		}
+
+		if isActive.Valid {
+			res.IsActive = isActive.Bool
 		}
 	}
 
