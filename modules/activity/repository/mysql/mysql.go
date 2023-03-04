@@ -70,7 +70,7 @@ func (m *MysqlRepository) Update(ctx context.Context, req domain.ActivityUpdateR
 		UPDATE activities 
 		SET
 			title = ?
-		WHERE id = ?
+		WHERE activity_id = ?
 	`)
 	if err != nil {
 		return
@@ -85,7 +85,7 @@ func (m *MysqlRepository) Update(ctx context.Context, req domain.ActivityUpdateR
 func (m *MysqlRepository) Delete(ctx context.Context, req domain.ActivityDeleteRequest) (res domain.ActivityDeleteResponse, err error) {
 	var stmt *sql.Stmt
 	stmt, err = m.Conn.PrepareContext(ctx, `
-		UPDATE activities SET deleted_at = NOW() WHERE id = ?
+		UPDATE activities SET deleted_at = NOW() WHERE activity_id = ?
 	`)
 	if err != nil {
 		return
@@ -98,10 +98,12 @@ func (m *MysqlRepository) Delete(ctx context.Context, req domain.ActivityDeleteR
 }
 
 func (m *MysqlRepository) GetAll(ctx context.Context, req domain.ActivityGetAllRequest) (res domain.ActivityGetAllResponse, err error) {
+	res = []domain.Activity{}
+	
 	var stmt *sql.Stmt
 	stmt, err = m.Conn.PrepareContext(ctx, `
 		SELECT 
-			id,
+			activity_id,
 			title,
 			email,
 			created_at,
@@ -157,14 +159,14 @@ func (m *MysqlRepository) GetOne(ctx context.Context, req domain.ActivityGetOneR
 	var stmt *sql.Stmt
 	stmt, err = m.Conn.PrepareContext(ctx, `
 		SELECT 
-			id,
+			activity_id,
 			title,
 			email,
 			created_at,
 			updated_at,
 			deleted_at
 		FROM activities
-		WHERE id = ?
+		WHERE activity_id = ?
 	`)
 	if err != nil {
 		return
