@@ -61,7 +61,7 @@ func (h *RESTHandler) Create(c *fiber.Ctx) error {
 		return nil
 	}
 
-	return c.JSON(web.BaseResponse{
+	return c.Status(http.StatusCreated).JSON(web.BaseResponse{
 		Status: message.Success,
 		Message: message.Success,
 		Data: res,
